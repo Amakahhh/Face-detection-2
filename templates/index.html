@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facial Emotion Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        input[type="text"]:focus,
+        input[type="file"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+        
+        .file-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .preview-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        #imagePreview {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            display: none;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .spinner {
+            display: none;
+            margin-right: 10px;
+        }
+        
+        .result-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .result-container.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .emotion-display {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        
+        .emotion-label {
+            font-weight: 600;
+            color: #667eea;
+            text-transform: capitalize;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease-out;
+        }
+        
+        .feedback-message {
+            margin-top: 15px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: center;
+            font-style: italic;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .error-container {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fee;
+            border: 2px solid #f88;
+            border-radius: 8px;
+            color: #c33;
+            font-size: 14px;
+        }
+        
+        .error-container.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .submissions-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .submissions-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .submissions-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .submission-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .submission-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .submission-emotion {
+            color: #667eea;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        
+        .submission-confidence {
+            color: #666;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+        
+        .submission-time {
+            color: #999;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+        
+        .no-submissions {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+                border-radius: 10px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            button {
+                padding: 12px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>😊 Emotion Detector</h1>
+        <p class="subtitle">Upload your photo to detect your emotion</p>
+        
+        <form id="emotionForm">
+            <!-- Name Input -->
+            <div class="form-group">
+                <label for="nameInput">Your Name *</label>
+                <input 
+                    type="text" 
+                    id="nameInput" 
+                    name="name" 
+                    placeholder="Enter your name" 
+                    required
+                    minlength="2"
+                >
+            </div>
+            
+            <!-- Image Upload -->
+            <div class="form-group">
+                <label for="imageInput">Upload Your Photo *</label>
+                <input 
+                    type="file" 
+                    id="imageInput" 
+                    name="image" 
+                    accept=".jpg,.jpeg,.png,.gif,.bmp" 
+                    required
+                >
+                <div class="file-info">Accepted formats: JPG, PNG, GIF, BMP (Max 5MB)</div>
+            </div>
+            
+            <!-- Image Preview -->
+            <div class="preview-container">
+                <img id="imagePreview" alt="Preview">
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" id="submitBtn">
+                <span class="spinner" id="spinner">⏳</span>
+                Detect Emotion
+            </button>
+        </form>
+        
+        <!-- Error Message -->
+        <div class="error-container" id="errorContainer"></div>
+        
+        <!-- Result Container -->
+        <div class="result-container" id="resultContainer">
+            <div class="result-header">✨ Analysis Result</div>
+            
+            <div class="emotion-display">
+                Detected Emotion: 
+                <span class="emotion-label" id="emotionResult"></span>
+            </div>
+            
+            <div class="emotion-display">
+                Confidence Level:
+            </div>
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+            </div>
+            <div class="emotion-display" style="text-align: right; font-size: 12px;">
+                <span id="confidenceText">0%</span>
+            </div>
+            
+            <div class="feedback-message" id="feedbackMessage"></div>
+        </div>
+        
+        <!-- Submissions Section -->
+        <div class="submissions-section">
+            <div class="submissions-title">📋 Recent Submissions</div>
+            <div class="submissions-list" id="submissionsList">
+                <div class="no-submissions">Loading submissions...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('emotionForm');
+        const nameInput = document.getElementById('nameInput');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const submitBtn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('spinner');
+        const errorContainer = document.getElementById('errorContainer');
+        const resultContainer = document.getElementById('resultContainer');
+        const submissionsList = document.getElementById('submissionsList');
+        
+        // Image preview on file select
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imagePreview.src = event.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Clear previous errors and results
+            errorContainer.classList.remove('show');
+            errorContainer.textContent = '';
+            resultContainer.classList.remove('show');
+            
+            // Validate inputs
+            if (!nameInput.value.trim()) {
+                showError('Please enter your name');
+                return;
+            }
+            
+            if (!imageInput.files.length) {
+                showError('Please select an image');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            submitBtn.textContent = ' Analyzing...';
+            
+            try {
+                // Create FormData
+                const formData = new FormData();
+                formData.append('name', nameInput.value.trim());
+                formData.append('image', imageInput.files[0]);
+                
+                // Send to backend
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showError(data.error || 'An error occurred');
+                } else {
+                    displayResult(data);
+                    loadSubmissions();
+                    form.reset();
+                    imagePreview.style.display = 'none';
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+                submitBtn.textContent = 'Detect Emotion';
+            }
+        });
+        
+        function showError(message) {
+            errorContainer.textContent = '❌ ' + message;
+            errorContainer.classList.add('show');
+        }
+        
+        function displayResult(data) {
+            document.getElementById('emotionResult').textContent = data.emotion;
+            document.getElementById('feedbackMessage').textContent = '"' + data.message + '"';
+            
+            const confidence = data.confidence;
+            document.getElementById('confidenceText').textContent = confidence + '%';
+            
+            // Animate confidence bar
+            setTimeout(() => {
+                document.getElementById('confidenceFill').style.width = confidence + '%';
+            }, 100);
+            
+            resultContainer.classList.add('show');
+        }
+        
+        function loadSubmissions() {
+            fetch('/submissions')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.submissions && data.submissions.length > 0) {
+                        submissionsList.innerHTML = data.submissions
+                            .map(submission => {
+                                const date = new Date(submission.submission_timestamp);
+                                const timeStr = date.toLocaleString();
+                                return `
+                                    <div class="submission-item">
+                                        <div class="submission-name">👤 ${escapeHtml(submission.name)}</div>
+                                        <div class="submission-emotion">Emotion: ${submission.detected_emotion}</div>
+                                        <div class="submission-confidence">Confidence: ${(submission.emotion_confidence * 100).toFixed(1)}%</div>
+                                        <div class="submission-time">${timeStr}</div>
+                                    </div>
+                                `;
+                            })
+                            .join('');
+                    } else {
+                        submissionsList.innerHTML = '<div class="no-submissions">No submissions yet</div>';
+                    }
+                })
+                .catch(error => {
+                    console.log('Could not load submissions:', error);
+                    submissionsList.innerHTML = '<div class="no-submissions">Unable to load submissions</div>';
+                });
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // Load submissions on page load
+        window.addEventListener('load', loadSubmissions);
+        
+        // Refresh submissions every 5 seconds
+        setInterval(loadSubmissions, 5000);
+    </script>
+</body>
+</html>
